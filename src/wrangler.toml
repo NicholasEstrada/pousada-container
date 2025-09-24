@@ -1,0 +1,24 @@
+name = "pousada-worker"
+main = "worker.ts" # ou o caminho do seu worker.ts
+compatibility_date = "2025-09-23" # ou a data mais recente
+
+workers_dev = true
+
+[[kv_namespaces]]
+binding = "USERS_KV"
+id = "73ab71e6562f495abcb22eeab181afb4" # Substitua pelo ID do seu namespace KV de usuários
+
+[[kv_namespaces]]
+binding = "BOOKINGS_KV"
+id = "8af2e6133a6c4f519da05cf9df2c0a9b" # Substitua pelo ID do seu namespace KV de reservas
+
+[[kv_namespaces]]
+binding = "POUSADA_INFO_KV"
+id = "32a1697604b741f3b3b68cad22550326" # Substitua pelo ID do seu namespace KV de informações da pousada
+
+[[r2_buckets]]
+binding = "IMAGES_R2"
+bucket_name = "bucket-r2-imagens-pousada" # Substitua pelo nome do seu bucket R2 de imagens
+
+# [vars]
+# JWT_SECRET = "UMA_CHAVE_SECRETA_MUITO_LONGA_E_RANDOMICA" # **IMPORTANTE**: Gere uma string aleatória longa e segura para produção!

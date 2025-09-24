@@ -3,16 +3,29 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler deploy",
-		"dev": "wrangler dev",
-		"start": "wrangler dev",
-		"test": "vitest",
-		"cf-typegen": "wrangler types"
+			"deploy": "wrangler deploy",
+			"dev": "vite",
+			"build": "vite build",
+			"start": "wrangler dev",
+			"test": "vitest",
+			"cf-typegen": "wrangler types"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.8.19",
+		"@types/react": "^19.1.13",
+		"@types/react-dom": "^19.1.9",
+		"@vitejs/plugin-react": "^5.0.3",
 		"typescript": "^5.5.2",
+		"vite": "^7.1.7",
 		"vitest": "~3.2.0",
 		"wrangler": "^4.39.0"
+	},
+	"dependencies": {
+		"@tsndr/cloudflare-worker-jwt": "^3.2.0",
+		"@types/bcryptjs": "^2.4.6",
+		"bcryptjs": "^3.0.2",
+		"itty-router": "^5.0.22",
+		"react": "^19.1.1",
+		"react-dom": "^19.1.1"
 	}
 }

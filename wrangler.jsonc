@@ -5,15 +5,22 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "pousada-oasis",
-	"main": "src/index.ts",
+	"main": "src/worker.ts",
 	"compatibility_date": "2025-09-24",
 	"compatibility_flags": [
 		"global_fetch_strictly_public"
 	],
-	"assets": {
-		// The path to the directory containing the `index.html` file to be served at `/`
-		"directory": "./public"
-	},
+		"assets": {
+			"directory": "./dist"
+		},
+	"kv_namespaces": [
+		{ "binding": "USERS_KV", "id": "73ab71e6562f495abcb22eeab181afb4" },
+		{ "binding": "BOOKINGS_KV", "id": "8af2e6133a6c4f519da05cf9df2c0a9b" },
+		{ "binding": "POUSADA_INFO_KV", "id": "32a1697604b741f3b3b68cad22550326" }
+	],
+	"r2_buckets": [
+		{ "binding": "IMAGES_R2", "bucket_name": "bucket-r2-imagens-pousada" }
+	],
 	"observability": {
 		"enabled": true
 	}
