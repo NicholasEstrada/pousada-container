@@ -13,6 +13,9 @@ interface Env {
   POUSADA_INFO_KV: KVNamespace;
   IMAGES_R2: R2Bucket;
   JWT_SECRET: string;
+  ASSETS?: {
+    fetch(path: string): Promise<Response>;
+  };
 }
 
 const router = Router();
@@ -314,9 +317,40 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     console.log('Worker: Recebeu requisição principal para:', request.url);
     try {
-      const response = await router.handle(request, env, ctx);
-      console.log(`Worker: Resposta final gerada para ${request.url}: Status ${response.status}`);
-      return response;
+      // Verifica se os bindings KV/R2 estão presentes
+      if (!env.USERS_KV || !env.BOOKINGS_KV || !env.POUSADA_INFO_KV || !env.IMAGES_R2) {
+        return new Response('Bindings KV/R2 não configurados corretamente.', { status: 500 });
+      }
+
+      // Se for rota de API, delega para o router
+      if (request.url.includes('/api/')) {
+        const response = await router.handle(request, env, ctx);
+        if (response) return response;
+        return new Response('API route not found', { status: 404 });
+      }
+
+      // Servir arquivos estáticos do React (dist)
+      const url = new URL(request.url);
+      let assetPath = url.pathname;
+      if (assetPath === '/' || assetPath === '') {
+        assetPath = '/index.html';
+      }
+      try {
+        // @ts-ignore: Wrangler assets binding
+        if (env.ASSETS) {
+          const asset = await env.ASSETS.fetch(assetPath);
+          if (asset && asset.status !== 404) return asset;
+        }
+      } catch (e) {
+        console.error('Erro ao buscar asset:', assetPath, e);
+      }
+
+      // Fallback: retorna index.html para SPA
+      if (env.ASSETS) {
+        const indexAsset = await env.ASSETS.fetch('/index.html');
+        if (indexAsset) return indexAsset;
+      }
+      return new Response('Not found', { status: 404 });
     } catch (err: any) {
       console.error(`Worker: ERRO FATAL no handle do roteador para ${request.url}:`, err);
       return new Response(err.stack || 'Erro interno do servidor', { status: 500 });
