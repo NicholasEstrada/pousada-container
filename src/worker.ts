@@ -14,7 +14,7 @@ interface Env {
   IMAGES_R2: R2Bucket;
   JWT_SECRET: string;
   ASSETS?: {
-    fetch(path: string): Promise<Response>;
+    fetch(request: Request): Promise<Response>;
   };
 }
 
@@ -336,9 +336,8 @@ export default {
         assetPath = '/index.html';
       }
       try {
-        // @ts-ignore: Wrangler assets binding
         if (env.ASSETS) {
-          const asset = await env.ASSETS.fetch(assetPath);
+          const asset = await env.ASSETS.fetch(new Request(assetPath));
           if (asset && asset.status !== 404) return asset;
         }
       } catch (e) {
@@ -347,7 +346,7 @@ export default {
 
       // Fallback: retorna index.html para SPA
       if (env.ASSETS) {
-        const indexAsset = await env.ASSETS.fetch('/index.html');
+        const indexAsset = await env.ASSETS.fetch(new Request('/index.html'));
         if (indexAsset) return indexAsset;
       }
       return new Response('Not found', { status: 404 });
@@ -359,12 +358,4 @@ export default {
 };
 
 // ... dentro do router.all('*')
-router.all('*', async (request, env) => {
-  console.log('Router: Entrou na rota ALL CATCH-ALL para:', request.url);
-  try {
-    return new Response(`Rota ${request.url} não encontrada.`, { status: 404 });
-  } catch (error) {
-    console.error('Router: Erro no router.all catch-all:', error);
-    return new Response('Erro interno no catch-all', { status: 500 });
-  }
-});
+router.all('*', () => new Response('Não encontrado.', { status: 404 }));

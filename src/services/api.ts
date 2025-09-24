@@ -1,7 +1,7 @@
 import { User, Booking, Image, PousadaInfo } from '../types';
 
 // --- CONFIGURAÇÃO DA API ---
-const API_BASE_URL = 'http://localhost:8787/api'; // Use a URL do seu Worker local ou de deploy
+const API_BASE_URL = 'https://pousada-oasis.nicholastrada.workers.dev/api'; // Use a URL do seu Worker local ou de deploy
 
 // Função auxiliar para requisições
 interface RequestOptions extends RequestInit {
