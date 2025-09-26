@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 // import { useAuth } from '../hooks/useAuth'; // Não é mais necessário para pegar o token
 import { Booking, Image, PousadaInfo, User } from '../types';
 // As funções agora não precisam mais do token como argumento
-import { getBookings, getImages, getPousadaInfo, updateBooking, deleteImage, uploadImage, updatePousadaInfo, getUsers } from '../services/api';
+import { getBookings, getImages, getPousadaInfo, updateBooking, deleteImage, uploadImage, updatePousadaInfo, getUsers, deleteBooking } from '../services/api';
 import { CalendarIcon } from './icons/CalendarIcon';
 import { UploadIcon } from './icons/UploadIcon';
 import { TrashIcon } from './icons/TrashIcon';
@@ -66,6 +66,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onDataUpdate }) => {
       onDataUpdate();
     } catch (error) {
       console.error("Failed to update booking", error);
+    }
+  };
+
+  const handleDeleteBooking = async (bookingId: string) => {
+    // Usar window.confirm é uma boa prática para evitar exclusões acidentais
+    if (window.confirm('Tem certeza que deseja deletar esta reserva permanentemente?')) {
+      try {
+        await deleteBooking(bookingId);
+        fetchData(); // Recarrega a lista de reservas
+        onDataUpdate(); // Notifica o componente pai, se necessário
+      } catch (error) {
+        console.error("Failed to delete booking", error);
+        alert("Falha ao deletar a reserva.");
+      }
     }
   };
 
@@ -153,6 +167,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onDataUpdate }) => {
                       <td className="py-3 px-4">{new Date(booking.data_fim + 'T00:00:00').toLocaleDateString()}</td>
                       <td className="py-3 px-4">
                         <button onClick={() => setEditingBooking(booking)} className="text-teal-600 hover:underline text-sm font-semibold">Editar</button>
+                        <button onClick={() => handleDeleteBooking(booking.id)} className="text-red-600 hover:underline text-sm font-semibold ml-4">Deletar</button>  
                       </td>
                     </tr>
                   ))}

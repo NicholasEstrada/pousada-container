@@ -129,6 +129,17 @@ export const updateBooking = async (id: string, bookingData: Booking): Promise<B
   return data;
 };
 
+export const deleteBooking = async (id: string): Promise<void> => {
+  const { error } = await supabase
+    .from('bookings')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+};
+
 // --- FUNÇÕES DE IMAGENS ---
 
 export const getImages = async (): Promise<Image[]> => {
@@ -138,7 +149,7 @@ export const getImages = async (): Promise<Image[]> => {
     const images = data.map(file => {
         const { data: { publicUrl } } = supabase.storage.from('images').getPublicUrl(file.name);
         return {
-            id: file.id,
+            id: file.name,
             url: publicUrl,
             alt: file.name
         };
