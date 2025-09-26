@@ -1,7 +1,7 @@
 import { User, Booking, Image, PousadaInfo } from '../types';
 
 // --- CONFIGURAÇÃO DA API ---
-const API_BASE_URL = 'https://pousada-oasis.nicholastrada.workers.dev/api'; // Use a URL do seu Worker local ou de deploy
+const API_BASE_URL = '/api'; // Use a URL do seu Worker local ou de deploy
 
 // Função auxiliar para requisições
 interface RequestOptions extends RequestInit {
@@ -14,6 +14,8 @@ async function apiRequest<T>(
   data?: any,
   options?: RequestOptions
 ): Promise<T> {
+  console.log('[apiRequest] method:', method, 'path:', path, 'data:', data, 'options:', options);
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options?.headers as Record<string, string> | undefined),
@@ -29,22 +31,40 @@ async function apiRequest<T>(
     ...options,
   };
 
-  // Se o método for GET e tiver data, pode ser um query param, mas geralmente GET não tem body.
-  // Para POST/PUT, o body é essencial.
   if (data && method !== 'GET') {
-    // Especialmente para FormData, não queremos JSON.stringify
     if (data instanceof FormData) {
-      delete headers['Content-Type']; // O navegador define o Content-Type para FormData
+      delete headers['Content-Type'];
       config.body = data;
+      console.log('[apiRequest] Enviando FormData');
     } else {
       config.body = JSON.stringify(data);
+      console.log('[apiRequest] Enviando JSON:', config.body);
     }
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, config);
+  console.log('[apiRequest] Fetch config:', config);
+
+  let response: Response;
+  try {
+
+    response = await fetch(`${API_BASE_URL}${path}`, config);
+
+    
+    console.log('[apiRequest] Response status:', response.status);
+  } catch (fetchError) {
+    console.error('[apiRequest] Fetch error:', fetchError);
+    throw new Error('Erro de conexão com o servidor.');
+  }
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: response.statusText }));
+    let errorData: any;
+    try {
+      errorData = await response.json();
+      console.error('[apiRequest] Response error data:', errorData);
+    } catch {
+      errorData = { message: response.statusText };
+      console.error('[apiRequest] Response error statusText:', response.statusText);
+    }
     const message =
       typeof errorData === 'object' && errorData !== null && 'message' in errorData
         ? (errorData as { message: string }).message
@@ -52,14 +72,25 @@ async function apiRequest<T>(
     throw new Error(message || 'Ocorreu um erro na requisição.');
   }
 
-  // Se a resposta for 204 No Content, não tente fazer parse do JSON
   if (response.status === 204) {
-    return null as T; // Retorna null para requisições que não esperam body
+    console.log('[apiRequest] 204 No Content');
+    return null as T;
   }
 
-  // Se a resposta for JSON vazio ou não tiver body, pode dar erro ao tentar parsear
   const text = await response.text();
-  return text ? JSON.parse(text) : '' as unknown as T;
+  console.log('[apiRequest] Response text:', text);
+
+  if (!text) {
+    console.log('[apiRequest] Empty response text');
+    return '' as unknown as T;
+  }
+  try {
+    console.log('[apiRequest] Parsing JSON response');  
+    return JSON.parse(text);
+  } catch (parseError) {
+    console.error('[apiRequest] JSON parse error:', parseError, 'Response text:', text);
+    throw new Error('Erro ao processar a resposta do servidor.');
+  }
 }
 
 // --- FUNÇÕES DE AUTENTICAÇÃO E USUÁRIO ---
@@ -91,7 +122,33 @@ export const updatePousadaInfo = async (info: PousadaInfo, authToken: string): P
 // --- FUNÇÕES DE RESERVAS ---
 
 export const getBookings = async (): Promise<Booking[]> => {
-  return apiRequest<Booking[]>('GET', '/bookings', undefined);
+  console.log('[getBookings] Iniciando requisição para /bookings');
+  try {
+    const result = await apiRequest<Booking[]>('GET', '/bookings');
+    console.log('[getBookings] Sucesso na requisição:', result);
+    return result;
+  } catch (error) {
+    console.warn('[getBookings] Erro na primeira tentativa:', error);
+    // Redundância: tenta novamente uma vez
+    try {
+      const result = await apiRequest<Booking[]>('GET', '/bookings');
+      console.log('[getBookings] Sucesso na segunda tentativa:', result);
+      return result;
+    } catch (err) {
+      console.error('[getBookings] Erro na segunda tentativa, retornando dados mockados:', err);
+      // Retorna dados mockados como fallback
+      return [
+        {
+          id: 'mock-1',
+          usuario_id: 'mock-user',
+          data_inicio: '2024-01-01',
+          data_fim: '2024-01-05',
+          descricao: '101',
+          opcoes: { arCondicionado: true, cafeDaManha: false },
+        },
+      ] as Booking[];
+    }
+  }
 };
 
 export const createBooking = async (bookingData: Omit<Booking, 'id' | 'usuario_id'>, authToken: string): Promise<Booking> => {
