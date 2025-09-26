@@ -1,121 +1,165 @@
+// api.ts
+import { supabase } from '../supabaseClient'; // Importe o cliente inicializado
 import { User, Booking, Image, PousadaInfo } from '../types';
 
-// --- CONFIGURAÇÃO DA API ---
-const API_BASE_URL = 'https://pousada-oasis.nicholastrada.workers.dev/api'; // Use a URL do seu Worker local ou de deploy
-
-// Função auxiliar para requisições
-interface RequestOptions extends RequestInit {
-  authToken?: string;
-}
-
-async function apiRequest<T>(
-  method: string,
-  path: string,
-  data?: any,
-  options?: RequestOptions
-): Promise<T> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options?.headers as Record<string, string> | undefined),
-  };
-
-  if (options?.authToken) {
-    headers['Authorization'] = `Bearer ${options.authToken}`;
-  }
-
-  const config: RequestInit = {
-    method,
-    headers,
-    ...options,
-  };
-
-  // Se o método for GET e tiver data, pode ser um query param, mas geralmente GET não tem body.
-  // Para POST/PUT, o body é essencial.
-  if (data && method !== 'GET') {
-    // Especialmente para FormData, não queremos JSON.stringify
-    if (data instanceof FormData) {
-      delete headers['Content-Type']; // O navegador define o Content-Type para FormData
-      config.body = data;
-    } else {
-      config.body = JSON.stringify(data);
-    }
-  }
-
-  const response = await fetch(`${API_BASE_URL}${path}`, config);
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: response.statusText }));
-    const message =
-      typeof errorData === 'object' && errorData !== null && 'message' in errorData
-        ? (errorData as { message: string }).message
-        : response.statusText;
-    throw new Error(message || 'Ocorreu um erro na requisição.');
-  }
-
-  // Se a resposta for 204 No Content, não tente fazer parse do JSON
-  if (response.status === 204) {
-    return null as T; // Retorna null para requisições que não esperam body
-  }
-
-  // Se a resposta for JSON vazio ou não tiver body, pode dar erro ao tentar parsear
-  const text = await response.text();
-  return text ? JSON.parse(text) : '' as unknown as T;
-}
+// O cliente Supabase gerencia o token automaticamente após o login.
 
 // --- FUNÇÕES DE AUTENTICAÇÃO E USUÁRIO ---
 
-// Agora signup também retorna o usuário e o token
+// O signup agora também faz o login automaticamente
 export const signup = async (email: string, password: string): Promise<{ user: User; token: string }> => {
-  return apiRequest<{ user: User; token: string }>('POST', '/signup', { email, password });
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error) throw new Error(error.message);
+  if (!data.user || !data.session) throw new Error('Não foi possível criar o usuário.');
+  
+  // A role será definida pelo trigger no banco de dados.
+  // O Supabase não retorna a role customizada diretamente no objeto 'user' do auth.
+  // Você pode buscar o perfil se precisar da role imediatamente.
+  return {
+    user: { id: data.user.id, email: data.user.email!, role: 'cliente' }, // Role padrão no front-end
+    token: data.session.access_token,
+  };
 };
 
-// Retorna o token JWT e o usuário
 export const login = async (email: string, password: string): Promise<{ user: User; token: string }> => {
-  return apiRequest<{ user: User; token: string }>('POST', '/login', { email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw new Error(error.message);
+  if (!data.user || !data.session) throw new Error('Login falhou.');
+
+  // Para pegar a role, precisamos buscar na tabela 'profiles'
+  const { data: profileData, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', data.user.id)
+    .single();
+
+  if (profileError) throw new Error(profileError.message);
+
+  return {
+    user: { id: data.user.id, email: data.user.email!, role: profileData.role as User['role'] },
+    token: data.session.access_token,
+  };
 };
 
-export const getUsers = async (authToken: string): Promise<User[]> => {
-  return apiRequest<User[]>('GET', '/users', undefined, { authToken });
+// Admin-only: busca todos os usuários
+export const getUsers = async (): Promise<User[]> => {
+  const { data, error } = await supabase.from('profiles').select('id, email, role');
+  if (error) throw new Error(error.message);
+  return data;
 };
 
 // --- FUNÇÕES DE INFORMAÇÕES DA POUSADA ---
 
 export const getPousadaInfo = async (): Promise<PousadaInfo> => {
-  return apiRequest<PousadaInfo>('GET', '/pousada-info');
+  // Buscamos a descrição e as opções em paralelo
+  const [infoRes, optionsRes] = await Promise.all([
+    supabase.from('pousada_info').select('description').single(),
+    supabase.from('pousada_options').select('id, label, price')
+  ]);
+
+  if (infoRes.error) throw new Error(infoRes.error.message);
+  if (optionsRes.error) throw new Error(optionsRes.error.message);
+
+  return {
+    description: infoRes.data.description,
+    options: optionsRes.data,
+  };
 };
 
-export const updatePousadaInfo = async (info: PousadaInfo, authToken: string): Promise<PousadaInfo> => {
-  return apiRequest<PousadaInfo>('PUT', '/pousada-info', info, { authToken });
+// Admin-only: atualiza informações. Note que não passamos mais o token.
+export const updatePousadaInfo = async (info: PousadaInfo): Promise<PousadaInfo> => {
+    // Transações são mais seguras para múltiplas escritas, mas para simplificar:
+    const { error: descError } = await supabase
+        .from('pousada_info')
+        .update({ description: info.description })
+        .eq('id', 1); // Supondo que só haverá uma linha
+
+    if (descError) throw new Error(descError.message);
+    
+    // Para opções, é mais complexo (upsert).
+    const { error: optError } = await supabase.from('pousada_options').upsert(info.options);
+    if(optError) throw new Error(optError.message);
+
+    return info;
 };
 
 // --- FUNÇÕES DE RESERVAS ---
 
+// RLS garante que o usuário só veja suas próprias reservas (ou todas se for admin)
 export const getBookings = async (): Promise<Booking[]> => {
-  return apiRequest<Booking[]>('GET', '/bookings', undefined);
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('*');
+
+  if (error) {
+    console.error('Erro ao buscar reservas:', error);
+    throw new Error(error.message);
+  }
+  return data;
 };
 
-export const createBooking = async (bookingData: Omit<Booking, 'id' | 'usuario_id'>, authToken: string): Promise<Booking> => {
-  return apiRequest<Booking>('POST', '/bookings', bookingData, { authToken });
+export const createBooking = async (bookingData: Omit<Booking, 'id' | 'usuario_id'>): Promise<Booking> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Usuário não autenticado.');
+
+  const newBooking = { ...bookingData, usuario_id: user.id };
+  
+  const { data, error } = await supabase
+    .from('bookings')
+    .insert(newBooking)
+    .select()
+    .single();
+    
+  if (error) throw new Error(error.message);
+  return data;
 };
 
-export const updateBooking = async (id: string, bookingData: Booking, authToken: string): Promise<Booking> => {
-  return apiRequest<Booking>('PUT', `/bookings/${id}`, bookingData, { authToken });
+export const updateBooking = async (id: string, bookingData: Booking): Promise<Booking> => {
+  // Remove campos que não devem ser atualizados para evitar erros
+  const { id: bookingId, usuario_id, ...updateData } = bookingData;
+
+  const { data, error } = await supabase
+    .from('bookings')
+    .update(updateData) // Atualiza apenas os dados relevantes
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
 };
 
 // --- FUNÇÕES DE IMAGENS ---
 
 export const getImages = async (): Promise<Image[]> => {
-  return apiRequest<Image[]>('GET', '/images');
+    const { data, error } = await supabase.storage.from('images').list();
+    if (error) throw new Error(error.message);
+
+    const images = data.map(file => {
+        const { data: { publicUrl } } = supabase.storage.from('images').getPublicUrl(file.name);
+        return {
+            id: file.id,
+            url: publicUrl,
+            alt: file.name
+        };
+    });
+    return images;
 };
 
-export const uploadImage = async (file: File, authToken: string): Promise<Image> => {
-  const formData = new FormData();
-  formData.append('file', file);
+export const uploadImage = async (file: File): Promise<Image> => {
+    const fileName = `${crypto.randomUUID()}-${file.name}`;
+    const { error: uploadError } = await supabase.storage
+        .from('images')
+        .upload(fileName, file);
+    
+    if (uploadError) throw new Error(uploadError.message);
 
-  // apiRequest já lida com FormData removendo o Content-Type
-  return apiRequest<Image>('POST', '/images', formData, { authToken });
+    const { data: { publicUrl } } = supabase.storage.from('images').getPublicUrl(fileName);
+
+    return { id: fileName, url: publicUrl, alt: file.name };
 };
 
-export const deleteImage = async (id: string, authToken: string): Promise<void> => {
-  return apiRequest<void>('DELETE', `/images/${id}`, undefined, { authToken });
+export const deleteImage = async (id: string): Promise<void> => {
+    const { error } = await supabase.storage.from('images').remove([id]);
+    if (error) throw new Error(error.message);
 };

@@ -3,12 +3,12 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-			"deploy": "wrangler deploy",
-			"dev": "vite",
-			"build": "vite build",
-			"start": "wrangler dev",
-			"test": "vitest",
-			"cf-typegen": "wrangler types"
+		"deploy": "wrangler deploy",
+		"dev": "vite",
+		"build": "vite build",
+		"start": "wrangler dev",
+		"test": "vitest",
+		"cf-typegen": "wrangler types"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.8.19",
@@ -21,6 +21,7 @@
 		"wrangler": "^4.39.0"
 	},
 	"dependencies": {
+		"@supabase/supabase-js": "^2.58.0",
 		"@tsndr/cloudflare-worker-jwt": "^3.2.0",
 		"@types/bcryptjs": "^2.4.6",
 		"bcryptjs": "^3.0.2",

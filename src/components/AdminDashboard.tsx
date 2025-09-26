@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../hooks/useAuth';
+// import { useAuth } from '../hooks/useAuth'; // Não é mais necessário para pegar o token
 import { Booking, Image, PousadaInfo, User } from '../types';
+// As funções agora não precisam mais do token como argumento
 import { getBookings, getImages, getPousadaInfo, updateBooking, deleteImage, uploadImage, updatePousadaInfo, getUsers } from '../services/api';
 import { CalendarIcon } from './icons/CalendarIcon';
 import { UploadIcon } from './icons/UploadIcon';
@@ -15,7 +16,7 @@ interface AdminDashboardProps {
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onDataUpdate }) => {
   const [activeTab, setActiveTab] = useState('bookings');
-  const { token } = useAuth();
+  // const { token } = useAuth(); // Removido. O cliente Supabase gerencia a sessão.
   
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [images, setImages] = useState<Image[]>([]);
@@ -26,14 +27,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onDataUpdate }) => {
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [description, setDescription] = useState('');
 
+  // A dependência 'token' foi removida do useCallback
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
+      // A chamada para getUsers() não precisa mais do token
       const [bookingsData, imagesData, infoData, usersData] = await Promise.all([
         getBookings(),
         getImages(),
         getPousadaInfo(),
-        token ? getUsers(token) : Promise.resolve([])
+        getUsers() 
       ]);
       setBookings(bookingsData);
       setImages(imagesData);
@@ -42,10 +45,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onDataUpdate }) => {
       setUsers(usersData);
     } catch (error) {
       console.error("Failed to fetch admin data", error);
+      // Aqui você poderia tratar o erro, talvez redirecionando para o login se for um erro 401
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, []); // Array de dependências agora está vazio
 
   useEffect(() => {
     fetchData();
@@ -53,9 +57,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onDataUpdate }) => {
 
   const handleUpdateBooking = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!editingBooking || !token) return;
+    if (!editingBooking) return;
     try {
-      await updateBooking(editingBooking.id, editingBooking, token);
+      // A chamada para updateBooking não precisa mais do token
+      await updateBooking(editingBooking.id, editingBooking);
       setEditingBooking(null);
       fetchData();
       onDataUpdate();
@@ -65,10 +70,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onDataUpdate }) => {
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0] && token) {
+    if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       try {
-        await uploadImage(file, token);
+        // A chamada para uploadImage não precisa mais do token
+        await uploadImage(file);
         fetchData();
         onDataUpdate();
       } catch (error) {
@@ -78,9 +84,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onDataUpdate }) => {
   };
 
   const handleDeleteImage = async (imageId: string) => {
-    if (window.confirm('Tem certeza que deseja deletar esta imagem?') && token) {
+    if (window.confirm('Tem certeza que deseja deletar esta imagem?')) {
       try {
-        await deleteImage(imageId, token);
+        // A chamada para deleteImage não precisa mais do token
+        await deleteImage(imageId);
         fetchData();
         onDataUpdate();
       } catch (error) {
@@ -90,10 +97,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onDataUpdate }) => {
   };
   
   const handleInfoUpdate = async () => {
-    if (!pousadaInfo || !token) return;
+    if (!pousadaInfo) return;
     try {
       const updatedInfo = { ...pousadaInfo, description };
-      await updatePousadaInfo(updatedInfo, token);
+      // A chamada para updatePousadaInfo não precisa mais do token
+      await updatePousadaInfo(updatedInfo);
       alert("Informações atualizadas com sucesso!");
       fetchData();
       onDataUpdate();
@@ -108,7 +116,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onDataUpdate }) => {
     return user ? user.email : 'Usuário não encontrado';
   };
 
+  // O resto do seu componente JSX permanece exatamente o mesmo...
   if (loading) return <div>Carregando painel...</div>;
+
 
   return (
     <div className="bg-white p-8 rounded-2xl shadow-lg w-full">

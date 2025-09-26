@@ -23,7 +23,12 @@
 	],
 	"observability": {
 		"enabled": true
+	},
+	"vars": {
+		"SUPABASE_URL": "https://hbiyvfxnaddpibmkgboc.supabase.co",
+		"SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhiaXl2ZnhuYWRkcGlibWtnYm9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4NjM0MDUsImV4cCI6MjA3NDQzOTQwNX0.cfvsOq6aQDJGCj_hkGpvXaUiBTE5jbqTWyhLL1DR60A"
 	}
+	
 	/**
 	 * Smart Placement
 	 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
