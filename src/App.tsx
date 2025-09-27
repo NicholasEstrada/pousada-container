@@ -73,7 +73,7 @@ const App: React.FC = () => {
         {view === 'home' ? (
           <>
             <section id="about" className="text-center mb-12">
-              <h1 className="text-5xl font-bold text-teal-800 mb-2">Pousada Oásis</h1>
+              <h1 className="text-5xl font-bold text-teal-800 mb-2">Pousada Container</h1>
               <p className="text-lg text-stone-600 max-w-3xl mx-auto">{pousadaInfo?.description}</p>
             </section>
             

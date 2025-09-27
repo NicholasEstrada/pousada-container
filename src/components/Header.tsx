@@ -16,7 +16,7 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, currentView, onViewChange
     <header className="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <div className="text-2xl font-bold text-teal-700 cursor-pointer" onClick={() => onViewChange('home')}>
-          Pousada Oásis
+          Pousada Container
         </div>
         <nav className="flex items-center space-x-4">
           {user ? (

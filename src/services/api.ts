@@ -200,3 +200,24 @@ export const updateUserProfile = async (updates: { phone_number?: string; [key: 
     throw new Error(error.message);
   }
 };
+
+export const getUserProfile = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Usuário não autenticado.');
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('phone_number') // Só precisamos do telefone por enquanto
+    .eq('id', user.id)
+    .single();
+  
+  if (error) {
+    // Se o perfil não for encontrado, não lance um erro, apenas retorne nulo.
+    if (error.code === 'PGRST116') {
+      return null;
+    }
+    throw error;
+  }
+  
+  return data;
+}

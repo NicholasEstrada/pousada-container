@@ -9,9 +9,6 @@ const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 // const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
 // const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
-console.log('Supabase URL:', supabaseUrl); // Verifique se a URL está correta
-console.log('Supabase Anon Key:', supabaseAnonKey ? 'Chave carregada' : 'Chave não carregada');
-
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Supabase URL and Anon Key must be provided in .env file.");
 }

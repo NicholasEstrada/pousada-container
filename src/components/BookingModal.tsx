@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 // import { useAuth } from '../hooks/useAuth'; // Não é mais necessário para o token
-import { createBooking, getPousadaInfo, updateUserProfile } from '../services/api'; // Importamos a nova função
+import { createBooking, getPousadaInfo, updateUserProfile, getUserProfile } from '../services/api'; // Importamos a nova função
 import { XIcon } from './icons/XIcon';
 import { PousadaInfo } from '../types';
 
@@ -39,11 +39,19 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({ onClose, onBook
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        const info = await getPousadaInfo();
+        const [info, profile] = await Promise.all([
+          getPousadaInfo(),
+          getUserProfile()
+        ]);
+
         setPousadaOptions(info.options);
         const initialOpcoes: {[key: string]: boolean} = {};
         info.options.forEach(opt => initialOpcoes[opt.id] = false);
         setOpcoes(initialOpcoes);
+
+        if (profile && profile.phone_number) {
+          setPhoneNumber(formatPhoneNumber(profile.phone_number)); // Formata o número ao preencher
+        }
       } catch (err) {
         console.error("Falha ao buscar opções da pousada", err);
         setError("Não foi possível carregar as opções. Tente novamente.");
