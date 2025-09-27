@@ -154,6 +154,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onDataUpdate }) => {
                 <thead className="bg-stone-100">
                   <tr>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-stone-600">Cliente</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-stone-600">Celular</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-stone-600">Check-in</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-stone-600">Check-out</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-stone-600">Ações</th>
@@ -162,7 +163,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onDataUpdate }) => {
                 <tbody className="text-stone-700">
                   {bookings.map(booking => (
                     <tr key={booking.id} className="border-b border-stone-200 hover:bg-stone-50">
-                      <td className="py-3 px-4">{findUserEmail(booking.usuario_id)}</td>
+                      <td className="py-3 px-4">{booking.profiles?.email ?? 'Email não encontrado'}</td>
+                      <td className="py-3 px-4">{booking.profiles?.phone_number ?? 'Não informado'}</td>
                       <td className="py-3 px-4">{new Date(booking.data_inicio + 'T00:00:00').toLocaleDateString()}</td>
                       <td className="py-3 px-4">{new Date(booking.data_fim + 'T00:00:00').toLocaleDateString()}</td>
                       <td className="py-3 px-4">

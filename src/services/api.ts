@@ -87,18 +87,29 @@ export const updatePousadaInfo = async (info: PousadaInfo): Promise<PousadaInfo>
 
 // RLS garante que o usuário só veja suas próprias reservas (ou todas se for admin)
 export const getBookings = async (): Promise<Booking[]> => {
+  // A MÁGICA ESTÁ AQUI, NA STRING DO .select()
   const { data, error } = await supabase
     .from('bookings')
-    .select('*');
+    .select(`
+      *,
+      profiles (
+        email,
+        phone_number
+      )
+    `);
 
   if (error) {
-    console.error('Erro ao buscar reservas:', error);
+    console.error('Erro ao buscar reservas com perfis:', error);
     throw new Error(error.message);
   }
+  
+  // O Supabase vai retornar um objeto aninhado.
+  // Precisamos "achatar" ele para se encaixar no nosso tipo `Booking` existente, se necessário.
+  // Vamos ajustar o tipo `Booking` para acomodar isso.
   return data;
 };
 
-export const createBooking = async (bookingData: Omit<Booking, 'id' | 'usuario_id'>): Promise<Booking> => {
+export const createBooking = async (bookingData: Omit<Booking, 'id' | 'usuario_id' | 'profiles'>): Promise<Booking> => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Usuário não autenticado.');
 
@@ -173,4 +184,19 @@ export const uploadImage = async (file: File): Promise<Image> => {
 export const deleteImage = async (id: string): Promise<void> => {
     const { error } = await supabase.storage.from('images').remove([id]);
     if (error) throw new Error(error.message);
+};
+
+export const updateUserProfile = async (updates: { phone_number?: string; [key: string]: any }): Promise<void> => {
+  // Pega o usuário logado para saber qual perfil atualizar.
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Usuário não autenticado.');
+
+  const { error } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('id', user.id); // Garante que ele só pode atualizar o próprio perfil.
+
+  if (error) {
+    throw new Error(error.message);
+  }
 };

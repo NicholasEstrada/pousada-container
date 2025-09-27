@@ -106,7 +106,6 @@ const App: React.FC = () => {
       {isLoginModalOpen && <LoginModal onClose={() => setLoginModalOpen(false)} />}
       {isBookingModalOpen && user && (
         <CreateBookingModal 
-          userId={user.id} 
           onClose={() => setBookingModalOpen(false)} 
           onBookingSuccess={handleBookingSuccess}
           bookedDates={bookings.flatMap(b => {

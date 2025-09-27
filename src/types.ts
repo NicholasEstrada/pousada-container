@@ -15,6 +15,10 @@ export interface Booking {
   data_fim: string; // YYYY-MM-DD
   descricao: string;
   opcoes: { [key: string]: boolean };
+  profiles: {
+    email: string;
+    phone_number: string | null;
+  } | null;
 }
 
 export interface Image {
